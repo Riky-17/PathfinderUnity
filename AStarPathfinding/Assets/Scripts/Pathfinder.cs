@@ -4,24 +4,36 @@ using UnityEngine;
 
 public class Pathfinder : MonoBehaviour
 {
-    [SerializeField] Transform seeker;
-    [SerializeField] Transform target;
-
+    public static Pathfinder Instance {get; private set;}
     GridPathfinder grid;
+    PathfinderRequestManager requestManager;
 
-    List<GridNode> neighbours = new List<GridNode>();
-    List<GridNode> nodesToCheck = new List<GridNode>();
-    HashSet<GridNode> checkedNodes = new HashSet<GridNode>();
+    List<GridNode> neighbours = new();
+    List<GridNode> nodesToCheck = new();
+    HashSet<GridNode> checkedNodes = new();
+    
 
     void Awake()
     {
+        Instance = this;
         grid = GetComponent<GridPathfinder>();
+        requestManager = GetComponent<PathfinderRequestManager>();
     }
 
-    public List<GridNode> FindPath(/*Vector3 startingPos, Vector3 targetPos*/)
+    public void StartFindPath(Vector3 startingPos, Vector3 targetPos)
     {
-        if(grid.CheckWorldPosInGrid(seeker.position, out GridNode startingNode) && grid.CheckWorldPosInGrid(target.position, out GridNode targetNode))
+        FindPath(startingPos, targetPos);
+        //StartCoroutine(FindPath(startingPos, targetPos));
+    }
+
+    void FindPath(Vector3 startingPos, Vector3 targetPos)
+    {
+        
+        bool isPathComplete = false;
+
+        if(grid.CheckWorldPosInGrid(startingPos, out GridNode startingNode) && startingNode.IsWalkable && grid.CheckWorldPosInGrid(targetPos, out GridNode targetNode) && targetNode.IsWalkable)
         {
+            List<Vector3> path = new();
             nodesToCheck.Clear();
             checkedNodes.Clear();
 
@@ -38,13 +50,21 @@ public class Pathfinder : MonoBehaviour
                     {
                         currentNode = node;
                     }
+                    else if (node.fCost == currentNode.fCost && node.hCost < currentNode.hCost)
+                    {
+                        currentNode = node;
+                    }
                 }
 
                 nodesToCheck.Remove(currentNode);
                 checkedNodes.Add(currentNode);
 
                 if(currentNode == targetNode)
+                {
+                    isPathComplete = true;
+                    path = RetracePath(startingNode, targetNode);
                     break;
+                }
 
                 neighbours = grid.GetNeighnourNodes(currentNode);
 
@@ -70,22 +90,29 @@ public class Pathfinder : MonoBehaviour
                     }
                 }
             }
+            //yield return null;
+            requestManager.FinishedProcessingPath(path, isPathComplete);
+        }
+        else
+        {
+            //yield return null;
+            requestManager.FinishedProcessingPath(null, isPathComplete);
+        }
+    }
 
-            if (checkedNodes.Contains(targetNode))
+    List<Vector3> RetracePath(GridNode startingNode, GridNode targetNode)
+    {
+        if (checkedNodes.Contains(targetNode))
+        {
+            List<Vector3> path = new() {targetNode.nodePos};
+            GridNode currentNode = targetNode;
+            while (currentNode != startingNode)
             {
-                List<GridNode> path = new List<GridNode>() {targetNode};
-                GridNode thisNode = targetNode;
-                while (thisNode != startingNode)
-                {
-                    thisNode = thisNode.parentNode;
-                    path.Add(thisNode);
-                }
-                return path;
+                currentNode = currentNode.parentNode;
+                path.Add(currentNode.nodePos);
             }
-            else
-            {
-                return null;
-            }
+            path.Reverse();
+            return path;
         }
         else
         {

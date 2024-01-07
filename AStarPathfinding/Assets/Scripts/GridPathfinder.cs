@@ -35,11 +35,6 @@ public class GridPathfinder : MonoBehaviour
         CreateGrid();
     }
 
-    void Update()
-    {
-        path = pathfinder.FindPath();
-    }
-
     void CreateGrid()
     {
         gridNodes = new GridNode[nodesAmountX, nodesAmountZ];
@@ -96,24 +91,24 @@ public class GridPathfinder : MonoBehaviour
         return true; 
     }
 
-    void OnDrawGizmos()
-    {
-        Gizmos.DrawWireCube(Vector3.zero, gridSize);
+    // void OnDrawGizmos()
+    // {
+    //     Gizmos.DrawWireCube(Vector3.zero, gridSize);
 
-        if (gridNodes != null)
-        {
-            Vector3 cornerOffsets = new(.25f, 0, .25f);
-            Vector3 cubeHeight = new(0, .5f, 0);
+    //     if (gridNodes != null)
+    //     {
+    //         Vector3 cornerOffsets = new(.25f, 0, .25f);
+    //         Vector3 cubeHeight = new(0, .5f, 0);
 
-            foreach (GridNode node in gridNodes)
-            {
-                Gizmos.color = node.IsWalkable ? Color.green : Color.red;
-                if (path != null && path.Contains(node))
-                {
-                    Gizmos .color = Color.black;
-                }
-                Gizmos.DrawCube(node.nodePos, Vector3.one - cornerOffsets + cubeHeight);
-            }
-        }
-    }
+    //         foreach (GridNode node in gridNodes)
+    //         {
+    //             Gizmos.color = node.IsWalkable ? Color.green : Color.red;
+    //             if (path != null && path.Contains(node))
+    //             {
+    //                 Gizmos .color = Color.black;
+    //             }
+    //             Gizmos.DrawCube(node.nodePos, Vector3.one - cornerOffsets + cubeHeight);
+    //         }
+    //     }
+    // }
 }
