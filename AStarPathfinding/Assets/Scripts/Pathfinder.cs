@@ -18,10 +18,13 @@ public class Pathfinder : MonoBehaviour
         grid = GetComponent<GridPathfinder>();
     }
 
-    void FindPath(Vector3 startingPos, Vector3 targetPos)
+    public List<GridNode> FindPath(/*Vector3 startingPos, Vector3 targetPos*/)
     {
-        if(grid.CheckWorldPosInGrid(startingPos, out GridNode startingNode) && grid.CheckWorldPosInGrid(targetPos, out GridNode targetNode))
+        if(grid.CheckWorldPosInGrid(seeker.position, out GridNode startingNode) && grid.CheckWorldPosInGrid(target.position, out GridNode targetNode))
         {
+            nodesToCheck.Clear();
+            checkedNodes.Clear();
+
             nodesToCheck.Add(startingNode);
             GridNode currentNode;
 
@@ -57,16 +60,36 @@ public class Pathfinder : MonoBehaviour
                     if (neighbour.gCost > distanceStartToNeighbour || !nodesToCheck.Contains(neighbour))
                     {
                         neighbour.gCost = distanceStartToNeighbour;
+                        neighbour.hCost = CalculateDistance(neighbour, targetNode);
                         neighbour.parentNode = currentNode;
 
                         if (!nodesToCheck.Contains(neighbour))
                         {
-                            neighbour.hCost = CalculateDistance(neighbour, targetNode);
                             nodesToCheck.Add(neighbour);
                         }
                     }
                 }
-            }  
+            }
+
+            if (checkedNodes.Contains(targetNode))
+            {
+                List<GridNode> path = new List<GridNode>() {targetNode};
+                GridNode thisNode = targetNode;
+                while (thisNode != startingNode)
+                {
+                    thisNode = thisNode.parentNode;
+                    path.Add(thisNode);
+                }
+                return path;
+            }
+            else
+            {
+                return null;
+            }
+        }
+        else
+        {
+            return null;
         }
     }
 
@@ -74,14 +97,15 @@ public class Pathfinder : MonoBehaviour
     {
         int distanceX = Mathf.Abs(nodeA.x - nodeB.x);
         int distanceZ = Mathf.Abs(nodeA.z - nodeB.z);
+        int distance;
 
-        if (distanceX < distanceZ)
+        if (distanceZ < distanceX)
         {
-            return 14 * distanceX + 10 * distanceZ - distanceX;
+            distance = 14 * distanceZ + 10 * (distanceX - distanceZ);
+            return distance;
         }
-        else
-        {
-            return 14 * distanceZ + 10 * distanceX - distanceZ;
-        }
+        
+        distance = 14 * distanceX + 10 * (distanceZ - distanceX);
+        return distance;
     }
 }

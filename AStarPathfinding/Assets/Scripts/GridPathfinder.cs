@@ -4,6 +4,8 @@ using UnityEngine;
 
 public class GridPathfinder : MonoBehaviour
 {
+    Pathfinder pathfinder;
+    List<GridNode> path = new List<GridNode>();
     [SerializeField] float gridSizeX = 1;
     float halfGridSizeX => gridSizeX / 2;
 
@@ -23,9 +25,19 @@ public class GridPathfinder : MonoBehaviour
 
     [SerializeField] LayerMask obstacleLayer;
 
+    void Awake()
+    {
+        pathfinder = GetComponent<Pathfinder>();
+    }
+
     void Start()
     {
         CreateGrid();
+    }
+
+    void Update()
+    {
+        path = pathfinder.FindPath();
     }
 
     void CreateGrid()
@@ -96,6 +108,10 @@ public class GridPathfinder : MonoBehaviour
             foreach (GridNode node in gridNodes)
             {
                 Gizmos.color = node.IsWalkable ? Color.green : Color.red;
+                if (path != null && path.Contains(node))
+                {
+                    Gizmos .color = Color.black;
+                }
                 Gizmos.DrawCube(node.nodePos, Vector3.one - cornerOffsets + cubeHeight);
             }
         }
