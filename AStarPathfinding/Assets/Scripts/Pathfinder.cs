@@ -31,7 +31,7 @@ public class Pathfinder : MonoBehaviour
         
         bool isPathComplete = false;
 
-        if(grid.CheckWorldPosInGrid(startingPos, out GridNode startingNode) && startingNode.IsWalkable && grid.CheckWorldPosInGrid(targetPos, out GridNode targetNode) && targetNode.IsWalkable)
+        if(grid.CheckWorldPosInGrid(startingPos, out GridNode startingNode) && grid.CheckWorldPosInGrid(targetPos, out GridNode targetNode) && targetNode.IsWalkable)
         {
             List<Vector3> path = new();
             nodesToCheck.Clear();
@@ -63,6 +63,7 @@ public class Pathfinder : MonoBehaviour
                 {
                     isPathComplete = true;
                     path = RetracePath(startingNode, targetNode);
+                    path = SimplifyPath(path);
                     break;
                 }
 
@@ -98,6 +99,36 @@ public class Pathfinder : MonoBehaviour
             //yield return null;
             requestManager.FinishedProcessingPath(null, isPathComplete);
         }
+    }
+
+    List<Vector3> SimplifyPath(List<Vector3> path)
+    {
+        if (path.Count < 2)
+        {
+            return path;
+        }
+
+        List<Vector3> simplifiedPath = new() {path[0]};
+        Vector3 prevRelVector = path[1] - path[0];
+
+        for (int i = 1; i < path.Count; i++)
+        {
+            if (i != path.Count - 1)
+            {
+                Vector3 relVector = path[i + 1] - path[i];
+                
+                if (relVector.normalized != prevRelVector.normalized)
+                {
+                    prevRelVector = relVector;
+                    simplifiedPath.Add(path[i]);
+                } 
+            }
+            else
+            {
+                simplifiedPath.Add(path[i]);
+            }
+        }
+        return simplifiedPath;
     }
 
     List<Vector3> RetracePath(GridNode startingNode, GridNode targetNode)
