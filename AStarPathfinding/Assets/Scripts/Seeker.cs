@@ -8,8 +8,9 @@ public class Seeker : MonoBehaviour
     [SerializeField] Transform hider;
     List<Vector3> path;
     bool canFollowPath = false;
-
+    int index = 0;
     float speed = 10f;
+
 
     void Update()
     {
@@ -20,22 +21,30 @@ public class Seeker : MonoBehaviour
             canFollowPath = !canFollowPath;
         }
 
-        if (canFollowPath)
+        if (canFollowPath && path != null)
         {
             FollowPath();
         }
     }
 
     private void FollowPath()
-    {   
-        if (path.Count < 2)
+    {  
+        Vector3 relVector = path[index] - transform.position;
+
+        if (relVector.magnitude < .5f)
+        {
+            index++;
+        }
+
+        if (index >= path.Count || path == null || path.Count < 1)
         {
             // has reached the destination
             canFollowPath = false;
+            index = 0;
             return;
         }
 
-        Vector3 dir = (path[1] - path[0]).normalized;
+        Vector3 dir = (path[index] - transform.position).normalized;
 
         transform.position += Time.deltaTime * speed * dir;
     }
@@ -45,6 +54,7 @@ public class Seeker : MonoBehaviour
         if (isPathComplete)
         {
             this.path = path;
+            index = 0;
         }
         else
         {
@@ -52,18 +62,21 @@ public class Seeker : MonoBehaviour
         }
     }
 
-    // void OnDrawGizmos()
-    // {
-    //     if (path != null)
-    //     {
-    //         for (int i = 0; i < path.Count; i++)
-    //         {
-    //             Gizmos.DrawCube(path[i], Vector3.one);
-    //             if (i != path.Count - 1)
-    //             {
-    //                 Gizmos.DrawLine(path[i], path[i + 1]);
-    //             }
-    //         }
-    //     }
-    // }
+    void OnDrawGizmos()
+    {
+        if (path != null)
+        {
+            for (int i = 0; i < path.Count; i++)
+            {
+                if (i == index)
+                    Gizmos.DrawLine(transform.position, path[0]);
+
+                Gizmos.DrawCube(path[i], Vector3.one);
+                if (i != path.Count - 1)
+                {
+                    Gizmos.DrawLine(path[i], path[i + 1]);
+                }
+            }
+        }
+    }
 }
