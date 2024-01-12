@@ -11,7 +11,6 @@ public class Seeker : MonoBehaviour
     int index = 0;
     float speed = 10f;
 
-
     void Update()
     {
         PathfinderRequestManager.RequestPath(transform.position, hider.position, OnPathFound);

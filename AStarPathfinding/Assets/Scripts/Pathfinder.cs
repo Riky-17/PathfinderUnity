@@ -9,7 +9,6 @@ public class Pathfinder : MonoBehaviour
     PathfinderRequestManager requestManager;
 
     List<GridNode> neighbours = new();
-    List<GridNode> neighbourWalls = new();
     List<GridNode> nodesToCheck = new();
     HashSet<GridNode> checkedNodes = new();
     
@@ -24,12 +23,10 @@ public class Pathfinder : MonoBehaviour
     public void StartFindPath(Vector3 startingPos, Vector3 targetPos)
     {
         FindPath(startingPos, targetPos);
-        //StartCoroutine(FindPath(startingPos, targetPos));
     }
 
     void FindPath(Vector3 startingPos, Vector3 targetPos)
     {
-        
         bool isPathComplete = false;
 
         if(grid.CheckWorldPosInGrid(startingPos, out GridNode startingNode) && startingNode.IsWalkable && grid.CheckWorldPosInGrid(targetPos, out GridNode targetNode) && targetNode.IsWalkable)
@@ -57,8 +54,6 @@ public class Pathfinder : MonoBehaviour
                     }
                 }
 
-                neighbourWalls.Clear();
-
                 nodesToCheck.Remove(currentNode);
                 checkedNodes.Add(currentNode);
 
@@ -74,19 +69,11 @@ public class Pathfinder : MonoBehaviour
 
                 foreach (GridNode neighbour in neighbours)
                 {
-                    if (!neighbour.IsWalkable && CalculateDistance(currentNode, neighbour) == 10)
-                    {
-                        neighbourWalls.Add(neighbour);
-                    }
-                }
-
-                foreach (GridNode neighbour in neighbours)
-                {
                     if (!neighbour.IsWalkable || checkedNodes.Contains(neighbour))
                         continue;
 
                         //this is to avoid the seeker cutting corner when next to a wall causing the seeker to momentarlly going inside a wall
-                    if (CalculateDistance(currentNode, neighbour) == 14 && neighbourWalls.Count > 0)
+                    if (CalculateDistance(currentNode, neighbour) == 14 && IsNodePastCorner(neighbours, currentNode, neighbour))
                         continue;
 
                     int distanceStartToNeighbour = currentNode.gCost + CalculateDistance(currentNode, neighbour);
@@ -104,12 +91,10 @@ public class Pathfinder : MonoBehaviour
                     }
                 }
             }
-            //yield return null;
             requestManager.FinishedProcessingPath(path, isPathComplete);
         }
         else
         {
-            //yield return null;
             requestManager.FinishedProcessingPath(null, isPathComplete);
         }
     }
@@ -160,15 +145,29 @@ public class Pathfinder : MonoBehaviour
     {
         int distanceX = Mathf.Abs(nodeA.x - nodeB.x);
         int distanceZ = Mathf.Abs(nodeA.z - nodeB.z);
-        int distance;
 
         if (distanceZ < distanceX)
         {
-            distance = 14 * distanceZ + 10 * (distanceX - distanceZ);
-            return distance;
+            return 14 * distanceZ + 10 * (distanceX - distanceZ);
         }
         
-        distance = 14 * distanceX + 10 * (distanceZ - distanceX);
-        return distance;
+        return 14 * distanceX + 10 * (distanceZ - distanceX);
+    }
+
+    bool IsNodePastCorner(List<GridNode> neighbours, GridNode currentNode, GridNode currentNeighbour)
+    {
+        foreach (GridNode neighbour in neighbours)
+        {
+            if(!neighbour.IsWalkable && CalculateDistance(currentNode, neighbour) == 10)
+            {
+                Vector2 currentToWall = new(neighbour.nodePos.x - currentNode.nodePos.x, neighbour.nodePos.z - currentNode.nodePos.z);
+                Vector2 currentToNeighbour = new(currentNeighbour.nodePos.x - currentNode.nodePos.x, currentNeighbour.nodePos.z - currentNode.nodePos.z);
+                if(Vector2.Dot(currentToWall, currentToNeighbour) > 0)
+                    return true;
+            }
+            else
+                continue;
+        }
+        return false;
     }
 }
