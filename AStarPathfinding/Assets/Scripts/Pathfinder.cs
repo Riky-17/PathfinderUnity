@@ -9,6 +9,7 @@ public class Pathfinder : MonoBehaviour
     PathfinderRequestManager requestManager;
 
     List<GridNode> neighbours = new();
+    List<GridNode> neighbourWalls = new();
     List<GridNode> nodesToCheck = new();
     HashSet<GridNode> checkedNodes = new();
     
@@ -31,7 +32,7 @@ public class Pathfinder : MonoBehaviour
         
         bool isPathComplete = false;
 
-        if(grid.CheckWorldPosInGrid(startingPos, out GridNode startingNode) && grid.CheckWorldPosInGrid(targetPos, out GridNode targetNode) && targetNode.IsWalkable)
+        if(grid.CheckWorldPosInGrid(startingPos, out GridNode startingNode) && startingNode.IsWalkable && grid.CheckWorldPosInGrid(targetPos, out GridNode targetNode) && targetNode.IsWalkable)
         {
             List<Vector3> path = new();
             nodesToCheck.Clear();
@@ -56,6 +57,8 @@ public class Pathfinder : MonoBehaviour
                     }
                 }
 
+                neighbourWalls.Clear();
+
                 nodesToCheck.Remove(currentNode);
                 checkedNodes.Add(currentNode);
 
@@ -71,10 +74,20 @@ public class Pathfinder : MonoBehaviour
 
                 foreach (GridNode neighbour in neighbours)
                 {
-                    if (!neighbour.IsWalkable || checkedNodes.Contains(neighbour))
+                    if (!neighbour.IsWalkable && CalculateDistance(currentNode, neighbour) == 10)
                     {
-                        continue;
+                        neighbourWalls.Add(neighbour);
                     }
+                }
+
+                foreach (GridNode neighbour in neighbours)
+                {
+                    if (!neighbour.IsWalkable || checkedNodes.Contains(neighbour))
+                        continue;
+
+                        //this is to avoid the seeker cutting corner when next to a wall causing the seeker to momentarlly going inside a wall
+                    if (CalculateDistance(currentNode, neighbour) == 14 && neighbourWalls.Count > 0)
+                        continue;
 
                     int distanceStartToNeighbour = currentNode.gCost + CalculateDistance(currentNode, neighbour);
 

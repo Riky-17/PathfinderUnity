@@ -31,7 +31,7 @@ public class Seeker : MonoBehaviour
     {  
         Vector3 relVector = path[index] - transform.position;
 
-        if (relVector.magnitude < .5f)
+        if (relVector.magnitude < .1f)
         {
             index++;
         }
