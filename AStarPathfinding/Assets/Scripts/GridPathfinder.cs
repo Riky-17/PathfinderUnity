@@ -1,10 +1,8 @@
-using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 
 public class GridPathfinder : MonoBehaviour
 {
-    Pathfinder pathfinder;
     [SerializeField] float gridSizeX = 1;
     float halfGridSizeX => gridSizeX / 2;
 
@@ -25,11 +23,6 @@ public class GridPathfinder : MonoBehaviour
     [SerializeField] LayerMask obstacleLayer;
 
     void Awake()
-    {
-        pathfinder = GetComponent<Pathfinder>();
-    }
-
-    void Start()
     {
         CreateGrid();
     }

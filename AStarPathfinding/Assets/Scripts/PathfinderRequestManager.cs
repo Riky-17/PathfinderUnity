@@ -1,5 +1,4 @@
 using System;
-using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 
@@ -16,10 +15,9 @@ public class PathfinderRequestManager : MonoBehaviour
         Instance = this;
     }
 
-    public static void RequestPath(Vector3 startPos, Vector3 targetPos, Action<List<Vector3>, bool> callback)
+    public static void RequestPath(PathfinderRequest request)
     {
-        PathfinderRequest newRequest = new(startPos, targetPos, callback);
-        Instance.pathfinderRequests.Enqueue(newRequest);
+        Instance.pathfinderRequests.Enqueue(request);
         Instance.TryProcessNextRequest();
     }
 

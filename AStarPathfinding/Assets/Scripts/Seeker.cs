@@ -1,5 +1,3 @@
-using System;
-using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 
@@ -13,7 +11,7 @@ public class Seeker : MonoBehaviour
 
     void Update()
     {
-        PathfinderRequestManager.RequestPath(transform.position, hider.position, OnPathFound);
+        PathfinderRequestManager.RequestPath(new(transform.position, hider.position, OnPathFound));
 
         if (Input.GetKeyDown(KeyCode.Space) && path != null)
         {
@@ -58,6 +56,7 @@ public class Seeker : MonoBehaviour
         else
         {
             this.path = null;
+            index = 0;
         }
     }
 

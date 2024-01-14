@@ -1,4 +1,3 @@
-using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 
@@ -6,7 +5,6 @@ public class Pathfinder : MonoBehaviour
 {
     public static Pathfinder Instance {get; private set;}
     GridPathfinder grid;
-    PathfinderRequestManager requestManager;
 
     List<GridNode> neighbours = new();
     List<GridNode> nodesToCheck = new();
@@ -17,7 +15,6 @@ public class Pathfinder : MonoBehaviour
     {
         Instance = this;
         grid = GetComponent<GridPathfinder>();
-        requestManager = GetComponent<PathfinderRequestManager>();
     }
 
     public void StartFindPath(Vector3 startingPos, Vector3 targetPos)
@@ -91,11 +88,11 @@ public class Pathfinder : MonoBehaviour
                     }
                 }
             }
-            requestManager.FinishedProcessingPath(path, isPathComplete);
+            PathfinderRequestManager.Instance.FinishedProcessingPath(path, isPathComplete);
         }
         else
         {
-            requestManager.FinishedProcessingPath(null, isPathComplete);
+            PathfinderRequestManager.Instance.FinishedProcessingPath(null, isPathComplete);
         }
     }
 
@@ -165,8 +162,6 @@ public class Pathfinder : MonoBehaviour
                 if(Vector2.Dot(currentToWall, currentToNeighbour) > 0)
                     return true;
             }
-            else
-                continue;
         }
         return false;
     }
