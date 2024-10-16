@@ -503,7 +503,6 @@ GameObject:
   serializedVersion: 6
   m_Component:
   - component: {fileID: 182328312}
-  - component: {fileID: 182328311}
   - component: {fileID: 182328313}
   - component: {fileID: 182328314}
   m_Layer: 0
@@ -513,24 +512,6 @@ GameObject:
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
   m_IsActive: 1
---- !u!114 &182328311
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 182328310}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 7becc7fb166558740b12784e1ab85a15, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: 
-  gridSizeX: 50
-  gridSizeY: 1
-  gridSizeZ: 50
-  obstacleLayer:
-    serializedVersion: 2
-    m_Bits: 8
 --- !u!4 &182328312
 Transform:
   m_ObjectHideFlags: 0
@@ -558,6 +539,11 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 700c1732cdf80184baf7919b626bcd86, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
+  gridSizeX: 50
+  gridSizeZ: 50
+  obstacleLayer:
+    serializedVersion: 2
+    m_Bits: 8
 --- !u!114 &182328314
 MonoBehaviour:
   m_ObjectHideFlags: 0

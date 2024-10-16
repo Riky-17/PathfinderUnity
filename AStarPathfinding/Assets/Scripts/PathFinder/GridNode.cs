@@ -9,7 +9,7 @@ public class GridNode
 
     public int gCost;
     public int hCost;
-    public int fCost => gCost + hCost;
+    public int FCost => gCost + hCost;
 
     public GridNode parentNode;
 

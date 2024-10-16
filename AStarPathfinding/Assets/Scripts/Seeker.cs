@@ -11,17 +11,13 @@ public class Seeker : MonoBehaviour
 
     void Update()
     {
-        PathfinderRequestManager.RequestPath(new(transform.position, hider.position, OnPathFound));
-
+        PathfinderRequestManager.Instance.RequestPath(new(transform.position, hider.position, OnPathFound));
+        
         if (Input.GetKeyDown(KeyCode.Space) && path != null)
-        {
             canFollowPath = !canFollowPath;
-        }
 
         if (canFollowPath && path != null)
-        {
             FollowPath();
-        }
     }
 
     private void FollowPath()
@@ -29,9 +25,7 @@ public class Seeker : MonoBehaviour
         Vector3 relVector = path[index] - transform.position;
 
         if (relVector.magnitude < .1f)
-        {
             index++;
-        }
 
         if (index >= path.Count || path == null || path.Count < 1)
         {
@@ -48,6 +42,7 @@ public class Seeker : MonoBehaviour
 
     void OnPathFound(List<Vector3> path, bool isPathComplete)
     {
+        // callback error first pattern
         if (isPathComplete)
         {
             this.path = path;

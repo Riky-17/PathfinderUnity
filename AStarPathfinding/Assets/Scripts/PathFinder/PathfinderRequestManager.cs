@@ -12,13 +12,16 @@ public class PathfinderRequestManager : MonoBehaviour
 
     void Awake()
     {
-        Instance = this;
+        if(Instance == null)
+            Instance = this;
+        else
+            Destroy(gameObject);
     }
 
-    public static void RequestPath(PathfinderRequest request)
+    public void RequestPath(PathfinderRequest request)
     {
-        Instance.pathfinderRequests.Enqueue(request);
-        Instance.TryProcessNextRequest();
+        pathfinderRequests.Enqueue(request);
+        TryProcessNextRequest();
     }
 
     void TryProcessNextRequest()
@@ -27,7 +30,7 @@ public class PathfinderRequestManager : MonoBehaviour
         {
             isProcessingRequest = true;
             currentRequest = pathfinderRequests.Dequeue();
-            Pathfinder.Instance.StartFindPath(currentRequest.startPos, currentRequest.targetPos);
+            Pathfinder.Instance.FindPath(currentRequest.startPos, currentRequest.targetPos);
         }
     }
 

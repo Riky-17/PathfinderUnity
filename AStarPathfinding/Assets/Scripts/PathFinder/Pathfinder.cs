@@ -4,29 +4,98 @@ using UnityEngine;
 public class Pathfinder : MonoBehaviour
 {
     public static Pathfinder Instance {get; private set;}
-    GridPathfinder grid;
 
     List<GridNode> neighbours = new();
     List<GridNode> nodesToCheck = new();
     HashSet<GridNode> checkedNodes = new();
-    
+
+    //grid fields
+    [SerializeField] float gridSizeX = 1;
+    float HalfGridSizeX => gridSizeX / 2;
+
+    [SerializeField] float gridSizeZ = 1;
+    float HalfGridSizeZ => gridSizeZ / 2;
+
+    int NodesAmountX => Mathf.RoundToInt(gridSizeX / NodeDiameter);
+    int NodesAmountZ => Mathf.RoundToInt(gridSizeZ / NodeDiameter);
+
+    GridNode[,] gridNodes;
+    float nodeRadius = .5f;
+    float NodeDiameter => nodeRadius * 2;
+
+    [SerializeField] LayerMask obstacleLayer;
 
     void Awake()
     {
-        Instance = this;
-        grid = GetComponent<GridPathfinder>();
+        if(Instance == null)
+            Instance = this;
+        else
+            Destroy(gameObject);
+
+        CreateGrid();
     }
 
-    public void StartFindPath(Vector3 startingPos, Vector3 targetPos)
+    void CreateGrid()
     {
-        FindPath(startingPos, targetPos);
+        gridNodes = new GridNode[NodesAmountX, NodesAmountZ];
+
+        for (int x = 0; x < NodesAmountX; x++)
+        {
+            for (int z = 0; z < NodesAmountZ; z++)
+            {
+                float xCoordinate = NodeDiameter * x + nodeRadius - gridSizeX / 2;
+                float zCoordinate = NodeDiameter * z + nodeRadius - gridSizeZ / 2;
+                Vector3 nodePos = new(xCoordinate, 0, zCoordinate);
+                bool isNodeWalkable = !(Physics.OverlapBox(nodePos, new(nodeRadius, .5f, nodeRadius), Quaternion.identity, obstacleLayer).Length > 0);
+                
+                GridNode node = new(nodePos, isNodeWalkable, x, z);
+                gridNodes[x, z] = node;
+            }
+        }
     }
 
-    void FindPath(Vector3 startingPos, Vector3 targetPos)
+    List<GridNode> GetNeighbourNodes(GridNode node)
+    {
+        List<GridNode> neighbours = new();
+
+        for (int x = -1; x < 2; x++)
+        {
+            for (int z = -1; z < 2; z++)
+            {
+                int neighbourX = Mathf.Clamp(node.x + x, 0, NodesAmountX - 1);                
+                int neighbourZ = Mathf.Clamp(node.z + z, 0, NodesAmountZ - 1);
+                
+                if(gridNodes[neighbourX, neighbourZ] != node)
+                    neighbours.Add(gridNodes[neighbourX, neighbourZ]);
+            }
+        }
+        return neighbours;
+    }
+
+    bool CheckWorldPosInGrid(Vector3 worldPos, out GridNode node)
+    {
+        if (worldPos.x < -HalfGridSizeX || worldPos.x > HalfGridSizeX || worldPos.z < -HalfGridSizeZ || worldPos.z > HalfGridSizeZ )
+        {
+            // world position is outside of the grid
+            node = null;
+            return false;
+        }
+
+        float tValueX = Mathf.InverseLerp(-HalfGridSizeX, HalfGridSizeX, worldPos.x);
+        float tValueZ = Mathf.InverseLerp(-HalfGridSizeZ, HalfGridSizeZ, worldPos.z);
+
+        int x = Mathf.RoundToInt(tValueX * (NodesAmountX - 1)); 
+        int z = Mathf.RoundToInt(tValueZ * (NodesAmountZ - 1));
+
+        node = gridNodes[x, z];
+        return true; 
+    }
+
+    public void FindPath(Vector3 startingPos, Vector3 targetPos)
     {
         bool isPathComplete = false;
 
-        if(grid.CheckWorldPosInGrid(startingPos, out GridNode startingNode) && startingNode.IsWalkable && grid.CheckWorldPosInGrid(targetPos, out GridNode targetNode) && targetNode.IsWalkable)
+        if(CheckWorldPosInGrid(startingPos, out GridNode startingNode) && startingNode.IsWalkable && CheckWorldPosInGrid(targetPos, out GridNode targetNode) && targetNode.IsWalkable)
         {
             List<Vector3> path = new();
             nodesToCheck.Clear();
@@ -41,14 +110,10 @@ public class Pathfinder : MonoBehaviour
 
                 foreach (GridNode node in nodesToCheck)
                 {
-                    if(node.fCost < currentNode.fCost)
-                    {
+                    if(node.FCost < currentNode.FCost)
                         currentNode = node;
-                    }
-                    else if (node.fCost == currentNode.fCost && node.hCost < currentNode.hCost)
-                    {
+                    else if (node.FCost == currentNode.FCost && node.hCost < currentNode.hCost)
                         currentNode = node;
-                    }
                 }
 
                 nodesToCheck.Remove(currentNode);
@@ -62,14 +127,14 @@ public class Pathfinder : MonoBehaviour
                     break;
                 }
 
-                neighbours = grid.GetNeighnourNodes(currentNode);
+                neighbours = GetNeighbourNodes(currentNode);
 
                 foreach (GridNode neighbour in neighbours)
                 {
                     if (!neighbour.IsWalkable || checkedNodes.Contains(neighbour))
                         continue;
 
-                        //this is to avoid the seeker cutting corner when next to a wall causing the seeker to momentarlly going inside a wall
+                    //this is to avoid the seeker cutting corner when next to a wall causing the seeker to momentarily going inside a wall
                     if (CalculateDistance(currentNode, neighbour) == 14 && IsNodePastCorner(neighbours, currentNode, neighbour))
                         continue;
 
@@ -82,18 +147,14 @@ public class Pathfinder : MonoBehaviour
                         neighbour.parentNode = currentNode;
 
                         if (!nodesToCheck.Contains(neighbour))
-                        {
                             nodesToCheck.Add(neighbour);
-                        }
                     }
                 }
             }
             PathfinderRequestManager.Instance.FinishedProcessingPath(path, isPathComplete);
         }
         else
-        {
             PathfinderRequestManager.Instance.FinishedProcessingPath(null, isPathComplete);
-        }
     }
 
     List<Vector3> SimplifyPath(List<Vector3> path)
@@ -109,9 +170,8 @@ public class Pathfinder : MonoBehaviour
             Vector3 relVector = path[i + 1] - path[i];
                 
             if (relVector.normalized != prevRelVector.normalized)
-            {
                 simplifiedPath.Add(path[i]);
-            }
+
             prevRelVector = relVector;
         }
         simplifiedPath.Add(path[^1]);
@@ -133,9 +193,7 @@ public class Pathfinder : MonoBehaviour
             return path;
         }
         else
-        {
             return null;
-        }
     }
 
     int CalculateDistance(GridNode nodeA, GridNode nodeB)
@@ -144,9 +202,7 @@ public class Pathfinder : MonoBehaviour
         int distanceZ = Mathf.Abs(nodeA.z - nodeB.z);
 
         if (distanceZ < distanceX)
-        {
             return 14 * distanceZ + 10 * (distanceX - distanceZ);
-        }
         
         return 14 * distanceX + 10 * (distanceZ - distanceX);
     }
@@ -164,5 +220,22 @@ public class Pathfinder : MonoBehaviour
             }
         }
         return false;
+    }
+    
+    void OnDrawGizmos()
+    {
+        Gizmos.DrawWireCube(Vector3.zero, new(gridSizeX, 1, gridSizeZ));
+
+        if (gridNodes != null)
+        {
+            Vector3 cornerOffsets = new(.25f, 0, .25f);
+            Vector3 cubeHeight = new(0, .5f, 0);
+
+            foreach (GridNode node in gridNodes)
+            {
+                Gizmos.color = node.IsWalkable ? Color.green : Color.red;
+                Gizmos.DrawCube(node.nodePos, Vector3.one - cornerOffsets + cubeHeight);
+            }
+        }
     }
 }
