@@ -1,5 +1,7 @@
 using System;
 using System.Collections.Generic;
+using Unity.Mathematics;
+using Unity.Collections;
 using UnityEngine;
 
 public class PathfinderRequestManager : MonoBehaviour
@@ -34,9 +36,13 @@ public class PathfinderRequestManager : MonoBehaviour
         }
     }
 
-    public void FinishedProcessingPath(List<Vector3> pathPositions, bool success)
+    public void FinishedProcessingPath(NativeList<float3> pathPositions, bool success)
     {
-        currentRequest.callback(pathPositions, success);
+        List<Vector3> path = new();
+        foreach (float3 pos in pathPositions)
+            path.Add(pos);
+
+        currentRequest.callback(path, success);
         isProcessingRequest = false;
         TryProcessNextRequest();
     }

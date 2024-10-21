@@ -9,9 +9,14 @@ public class Seeker : MonoBehaviour
     int index = 0;
     float speed = 10f;
 
-    void Update()
+    void Start()
     {
         PathfinderRequestManager.Instance.RequestPath(new(transform.position, hider.position, OnPathFound));
+    }
+
+    void Update()
+    {
+        // PathfinderRequestManager.Instance.RequestPath(new(transform.position, hider.position, OnPathFound));
         
         if (Input.GetKeyDown(KeyCode.Space) && path != null)
             canFollowPath = !canFollowPath;
