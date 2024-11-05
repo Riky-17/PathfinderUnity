@@ -32,16 +32,12 @@ public class PathfinderRequestManager : MonoBehaviour
         {
             isProcessingRequest = true;
             currentRequest = pathfinderRequests.Dequeue();
-            Pathfinder.Instance.FindPath(currentRequest.startPos, currentRequest.targetPos);
+            Pathfinder.Instance.FindPath(currentRequest);
         }
     }
 
-    public void FinishedProcessingPath(NativeList<float3> pathPositions, bool success)
+    public void FinishedProcessingPath(List<Vector3> path, bool success)
     {
-        List<Vector3> path = new();
-        foreach (float3 pos in pathPositions)
-            path.Add(pos);
-
         currentRequest.callback(path, success);
         isProcessingRequest = false;
         TryProcessNextRequest();

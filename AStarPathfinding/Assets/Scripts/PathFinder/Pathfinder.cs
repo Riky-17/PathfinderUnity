@@ -8,20 +8,9 @@ public class Pathfinder : MonoBehaviour
 {
     public static Pathfinder Instance {get; private set;}
 
-    //grid fields
-    [SerializeField] float gridSizeX = 1;
-
-    [SerializeField] float gridSizeZ = 1;
-
-    int NodesAmountX => (int)math.round(gridSizeX / NodeDiameter);
-    int NodesAmountZ => (int)math.round(gridSizeZ / NodeDiameter);
-    int TotalNodesAmount => NodesAmountX * NodesAmountZ;
-
-    NativeArray<PathNode> gridNodes;
-    float nodeRadius = .5f;
-    float NodeDiameter => nodeRadius * 2;
-
     [SerializeField] LayerMask obstacleLayer;
+
+    List<PathFinderJobContainer> pathFinderJobs = new();
 
     void Awake()
     {
@@ -34,104 +23,47 @@ public class Pathfinder : MonoBehaviour
             Destroy(gameObject);
     }
 
-    void CreateGrid()
+    void Update()
     {
-        gridNodes = new(TotalNodesAmount, Allocator.Persistent);
-
-        for (int x = 0; x < NodesAmountX; x++)
+        for (int i = pathFinderJobs.Count - 1; i >= 0 ; i--)
         {
-            for (int z = 0; z < NodesAmountZ; z++)
+            PathFinderJobContainer job = pathFinderJobs[i];
+            if(job.IsComplete())
             {
-                float xCoordinate = NodeDiameter * x + nodeRadius - gridSizeX / 2;
-                float zCoordinate = NodeDiameter * z + nodeRadius - gridSizeZ / 2;
-                Vector3 nodePos = new(xCoordinate, 0, zCoordinate);
-                bool isNodeWalkable = !(Physics.OverlapBox(nodePos, new(nodeRadius, .5f, nodeRadius), Quaternion.identity, obstacleLayer).Length > 0);
-                
-                PathNode node = new(nodePos, isNodeWalkable, x, z, NodesAmountX);
-                gridNodes[node.index] = node;
+                job.CompleteJob();
+                pathFinderJobs.RemoveAt(i);
+                List<Vector3> path = new(job.path);
+                PathfinderRequestManager.Instance.FinishedProcessingPath(path, true);
             }
         }
     }
 
-    public void FindPath(float3 startingPos, float3 targetPos)
+    public void FindPath(PathfinderRequest request)
     {
-        CreateGrid();
-
-        NativeList<float3> path = new(TotalNodesAmount, Allocator.TempJob);
-        NativeList<PathNode> nodesToCheck = new(Allocator.TempJob);
-        NativeHashSet<PathNode> checkedNodes = new(TotalNodesAmount, Allocator.TempJob);
-        NativeList<PathNode> neighbours = new(Allocator.TempJob);
-        PathFinderJob job = new()
-        {
-            gridSizeX = gridSizeX,
-            gridSizeZ = gridSizeZ,
-
-            nodeRadius = nodeRadius,
-
-            startingPos = startingPos,
-            targetPos = targetPos,
-
-            gridNodes = gridNodes,
-            nodesToCheck = nodesToCheck,
-            checkedNodes = checkedNodes,
-            neighbours = neighbours,
-
-            path = path,
-        };
-        
-        JobHandle jobHandle = job.Schedule();
-        jobHandle.Complete();
-        // Debug.Log(job.path[0]);
-        // Debug.Log(job.path[1]);
-        gridNodes.Dispose();
-        nodesToCheck.Dispose();
-        checkedNodes.Dispose();
-        neighbours.Dispose();
-        // Debug.Log(path[0]);
-        PathfinderRequestManager.Instance.FinishedProcessingPath(path, true);
-        path.Dispose();
+        PathFinderJobContainer jobContainer = new(request, obstacleLayer);
+        jobContainer.ScheduleJob();
+        pathFinderJobs.Add(jobContainer);
     }
-    
-    // void OnDrawGizmos()
-    // {
-    //     Gizmos.DrawWireCube(Vector3.zero, new(gridSizeX, 1, gridSizeZ));
-
-    //     if (gridNodes != null)
-    //     {
-    //         Vector3 cornerOffsets = new(.25f, 0, .25f);
-    //         Vector3 cubeHeight = new(0, .5f, 0);
-
-    //         foreach (PathNode node in gridNodes)
-    //         {
-    //             Gizmos.color = node.IsWalkable ? Color.green : Color.red;
-    //             Gizmos.DrawCube(node.nodePos, Vector3.one - cornerOffsets + cubeHeight);
-    //         }
-    //     }
-    // }
 }
 
 public struct PathFinderJob : IJob
 {
     public float gridSizeX;
-    readonly float HalfGridSizeX => gridSizeX / 2;
-
     public float gridSizeZ;
-    readonly float HalfGridSizeZ => gridSizeZ / 2;
-    
-    public float nodeRadius;
-    readonly float NodeDiameter => nodeRadius * 2;
 
-    readonly int NodesAmountX => (int)math.round(gridSizeX / NodeDiameter);
-    readonly int NodesAmountZ => (int)math.round(gridSizeZ / NodeDiameter);
+    public float nodeDiameter;
+    
+    readonly int NodesAmountX => (int)math.round(gridSizeX / nodeDiameter);
+    readonly int NodesAmountZ => (int)math.round(gridSizeZ / nodeDiameter);
 
     public float3 startingPos;
     public float3 targetPos;
 
     public NativeArray<PathNode> gridNodes;
 
-    public NativeList<PathNode> nodesToCheck;
-    public NativeHashSet<PathNode> checkedNodes;
-    public NativeList<PathNode> neighbours;
+    // public NativeList<PathNode> nodesToCheck;
+    // public NativeHashSet<PathNode> checkedNodes;
+    // public NativeList<PathNode> neighbours;
 
     public NativeList<float3> path;
 
@@ -139,7 +71,8 @@ public struct PathFinderJob : IJob
     {
         if(CheckWorldPosInGrid(startingPos, out PathNode startingNode) && startingNode.IsWalkable && CheckWorldPosInGrid(targetPos, out PathNode targetNode) && targetNode.IsWalkable)
         {
-            nodesToCheck.Add(startingNode);
+            NativeList<PathNode> nodesToCheck = new(Allocator.Temp) { startingNode };
+            NativeList<PathNode> checkedNodes = new(Allocator.Temp);
             PathNode currentNode;
 
             while(nodesToCheck.Length > 0)
@@ -171,7 +104,7 @@ public struct PathFinderJob : IJob
                     break;
                 }
 
-                neighbours = GetNeighbourNodes(currentNode);
+                NativeList<PathNode> neighbours = GetNeighbourNodes(currentNode);
 
                 for (int i = 0; i < neighbours.Length; i++)
                 {
@@ -180,7 +113,7 @@ public struct PathFinderJob : IJob
                         continue;
 
                     //this is to avoid the seeker cutting corner when next to a wall causing the seeker to momentarily going inside a wall
-                    if (CalculateDistance(currentNode, neighbour) == 14 && IsNodePastCorner(currentNode, neighbour))
+                    if (CalculateDistance(currentNode, neighbour) == 14 && IsNodePastCorner(neighbours, currentNode, neighbour))
                         continue;
 
                     int distanceStartToNeighbour = currentNode.gCost + CalculateDistance(currentNode, neighbour);
@@ -198,7 +131,7 @@ public struct PathFinderJob : IJob
                 }
             }
 
-            NativeList<float3> tempPath = RetracePath(startingNode, targetNode);
+            NativeList<float3> tempPath = RetracePath(checkedNodes, startingNode, targetNode);
             tempPath = SimplifyPath(tempPath);
             for (int i = 0; i < tempPath.Length; i++)
             {
@@ -209,15 +142,17 @@ public struct PathFinderJob : IJob
 
     bool CheckWorldPosInGrid(Vector3 worldPos, out PathNode node)
     {
-        if (worldPos.x < -HalfGridSizeX || worldPos.x > HalfGridSizeX || worldPos.z < -HalfGridSizeZ || worldPos.z > HalfGridSizeZ )
+        float halfGridSizeX = gridSizeX / 2;
+        float halfGridSizeZ = gridSizeZ / 2;
+        if (worldPos.x < -halfGridSizeX || worldPos.x > halfGridSizeX || worldPos.z < -halfGridSizeZ || worldPos.z > halfGridSizeZ )
         {
             // world position is outside of the grid
             node = default;
             return false;
         }
 
-        float tValueX = InverseLerp(-HalfGridSizeX, HalfGridSizeX, worldPos.x);
-        float tValueZ = InverseLerp(-HalfGridSizeZ, HalfGridSizeZ, worldPos.z);
+        float tValueX = InverseLerp(-halfGridSizeX, halfGridSizeX, worldPos.x);
+        float tValueZ = InverseLerp(-halfGridSizeZ, halfGridSizeZ, worldPos.z);
 
         int x = (int)math.round(tValueX * (NodesAmountX - 1)); 
         int z = (int)math.round(tValueZ * (NodesAmountZ - 1));
@@ -255,7 +190,7 @@ public struct PathFinderJob : IJob
         return 14 * distanceX + 10 * (distanceZ - distanceX);
     }
     
-    readonly bool IsNodePastCorner(PathNode currentNode, PathNode currentNeighbour)
+    readonly bool IsNodePastCorner(NativeList<PathNode> neighbours, PathNode currentNode, PathNode currentNeighbour)
     {
         foreach (PathNode neighbour in neighbours)
         {
@@ -293,7 +228,7 @@ public struct PathFinderJob : IJob
         return simplifiedPath;
     }
     
-    NativeList<float3> RetracePath(PathNode startingNode, PathNode targetNode)
+    NativeList<float3> RetracePath(NativeList<PathNode> checkedNodes, PathNode startingNode, PathNode targetNode)
     {
         if (checkedNodes.Contains(targetNode))
         {
