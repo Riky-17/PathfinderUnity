@@ -224,7 +224,7 @@ Transform:
   m_GameObject: {fileID: 54334326}
   serializedVersion: 2
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: 17.2, y: 0, z: -8.3}
+  m_LocalPosition: {x: 17.7, y: 0, z: -8.2}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
@@ -249,7 +249,7 @@ GameObject:
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
-  m_IsActive: 0
+  m_IsActive: 1
 --- !u!114 &66554727
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -263,6 +263,9 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   hider: {fileID: 54334330}
+  obstacleLayer:
+    serializedVersion: 2
+    m_Bits: 8
 --- !u!136 &66554728
 CapsuleCollider:
   m_ObjectHideFlags: 0
@@ -504,7 +507,6 @@ GameObject:
   m_Component:
   - component: {fileID: 182328312}
   - component: {fileID: 182328313}
-  - component: {fileID: 182328314}
   m_Layer: 0
   m_Name: A* Pathfinder
   m_TagString: Untagged
@@ -537,23 +539,6 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 700c1732cdf80184baf7919b626bcd86, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: 
-  gridSizeX: 50
-  gridSizeZ: 50
-  obstacleLayer:
-    serializedVersion: 2
-    m_Bits: 8
---- !u!114 &182328314
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 182328310}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 06fcc939a1d236245907889c86362888, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
 --- !u!1 &311087733
@@ -677,6 +662,9 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   hider: {fileID: 54334330}
+  obstacleLayer:
+    serializedVersion: 2
+    m_Bits: 8
 --- !u!1 &312307562
 GameObject:
   m_ObjectHideFlags: 0
@@ -696,7 +684,7 @@ GameObject:
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
-  m_IsActive: 0
+  m_IsActive: 1
 --- !u!114 &312307563
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -710,6 +698,9 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   hider: {fileID: 54334330}
+  obstacleLayer:
+    serializedVersion: 2
+    m_Bits: 8
 --- !u!136 &312307564
 CapsuleCollider:
   m_ObjectHideFlags: 0

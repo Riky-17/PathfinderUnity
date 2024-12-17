@@ -4,25 +4,27 @@ using UnityEngine;
 public class Seeker : MonoBehaviour
 {
     [SerializeField] Transform hider;
+    [SerializeField] LayerMask obstacleLayer;
     List<Vector3> path;
     bool canFollowPath = false;
     int index = 0;
     float speed = 10f;
-
-    void Start()
-    {
-        PathfinderRequestManager.Instance.RequestPath(new(transform.position, hider.position, OnPathFound));
-    }
+    bool pathRequest = false;
 
     void Update()
     {
-        // PathfinderRequestManager.Instance.RequestPath(new(transform.position, hider.position, OnPathFound));
-        
+        if(!pathRequest)
+        {
+            Pathfinder.Instance.FindPath(new(transform.position, hider.position, obstacleLayer,  OnPathFound));
+            pathRequest = true;
+        }
+
         if (Input.GetKeyDown(KeyCode.Space) && path != null)
             canFollowPath = !canFollowPath;
 
         if (canFollowPath && path != null)
             FollowPath();
+
     }
 
     private void FollowPath()
@@ -47,6 +49,7 @@ public class Seeker : MonoBehaviour
 
     void OnPathFound(List<Vector3> path, bool isPathComplete)
     {
+        pathRequest = false;
         // callback error first pattern
         if (isPathComplete)
         {

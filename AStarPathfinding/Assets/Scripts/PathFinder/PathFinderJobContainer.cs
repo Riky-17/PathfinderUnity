@@ -10,6 +10,7 @@ public class PathFinderJobContainer : IDisposable
 {
     PathFinderJob job;
     JobHandle jobHandle;
+    PathfinderRequest request;
     NativeArray<PathNode> gridNodes;
     NativeList<float3> jobResult;
     public List<Vector3> path;
@@ -18,9 +19,10 @@ public class PathFinderJobContainer : IDisposable
     float sizeZ = 50f;
     float nodeRadius = .5f;
 
-    public PathFinderJobContainer(PathfinderRequest request, LayerMask obstacleLayer)
+    public PathFinderJobContainer(PathfinderRequest request)
     {
-        gridNodes = PathFinderGrid.CreateGrid(sizeX, sizeZ, nodeRadius, obstacleLayer);
+        this.request = request;
+        gridNodes = PathFinderGrid.CreateGrid(sizeX, sizeZ, nodeRadius, request.obstacleLayer);
         jobResult = new(Allocator.Persistent);
         path = new();
         job = new()
@@ -40,10 +42,15 @@ public class PathFinderJobContainer : IDisposable
     public void CompleteJob()
     {
         jobHandle.Complete();
+
         foreach (float3 pos in jobResult)
             path.Add(pos);
+            
         jobResult.Dispose();
         gridNodes.Dispose();
+
+        request.callback(path, true);
+        
     }
 
     public bool IsComplete() => jobHandle.IsCompleted;
@@ -52,7 +59,8 @@ public class PathFinderJobContainer : IDisposable
 
     public void Dispose()
     {
-        gridNodes.Dispose();
+        jobHandle.Complete();
         jobResult.Dispose();
+        gridNodes.Dispose();
     }
 }

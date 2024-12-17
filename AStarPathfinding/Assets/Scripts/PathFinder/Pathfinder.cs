@@ -8,8 +8,6 @@ public class Pathfinder : MonoBehaviour
 {
     public static Pathfinder Instance {get; private set;}
 
-    [SerializeField] LayerMask obstacleLayer;
-
     List<PathFinderJobContainer> pathFinderJobs = new();
 
     void Awake()
@@ -23,6 +21,12 @@ public class Pathfinder : MonoBehaviour
             Destroy(gameObject);
     }
 
+    void OnDisable()
+    {
+        foreach (PathFinderJobContainer job in pathFinderJobs)
+            job.Dispose();
+    }
+
     void Update()
     {
         for (int i = pathFinderJobs.Count - 1; i >= 0 ; i--)
@@ -32,15 +36,13 @@ public class Pathfinder : MonoBehaviour
             {
                 job.CompleteJob();
                 pathFinderJobs.RemoveAt(i);
-                List<Vector3> path = new(job.path);
-                PathfinderRequestManager.Instance.FinishedProcessingPath(path, true);
             }
         }
     }
 
     public void FindPath(PathfinderRequest request)
     {
-        PathFinderJobContainer jobContainer = new(request, obstacleLayer);
+        PathFinderJobContainer jobContainer = new(request);
         jobContainer.ScheduleJob();
         pathFinderJobs.Add(jobContainer);
     }
@@ -227,6 +229,7 @@ public struct PathFinderJob : IJob
         simplifiedPath.Add(path[^1]);
         return simplifiedPath;
     }
+    
     
     NativeList<float3> RetracePath(NativeList<PathNode> checkedNodes, PathNode startingNode, PathNode targetNode)
     {
