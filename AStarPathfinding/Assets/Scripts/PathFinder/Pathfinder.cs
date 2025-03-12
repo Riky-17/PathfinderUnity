@@ -63,10 +63,6 @@ public struct PathFinderJob : IJob
 
     public NativeArray<PathNode> gridNodes;
 
-    // public NativeList<PathNode> nodesToCheck;
-    // public NativeHashSet<PathNode> checkedNodes;
-    // public NativeList<PathNode> neighbours;
-
     public NativeList<float3> path;
 
     public void Execute()
@@ -114,11 +110,13 @@ public struct PathFinderJob : IJob
                     if (!neighbour.IsWalkable || checkedNodes.Contains(neighbour))
                         continue;
 
+                    int dist = CalculateDistance(currentNode, neighbour);
+
                     //this is to avoid the seeker cutting corner when next to a wall causing the seeker to momentarily going inside a wall
-                    if (CalculateDistance(currentNode, neighbour) == 14 && IsNodePastCorner(neighbours, currentNode, neighbour))
+                    if (dist == 14 && IsNodePastCorner(neighbours, currentNode, neighbour))
                         continue;
 
-                    int distanceStartToNeighbour = currentNode.gCost + CalculateDistance(currentNode, neighbour);
+                    int distanceStartToNeighbour = currentNode.gCost + dist;
 
                     if (neighbour.gCost > distanceStartToNeighbour || !nodesToCheck.Contains(neighbour))
                     {
@@ -132,13 +130,10 @@ public struct PathFinderJob : IJob
                     }
                 }
             }
-
             NativeList<float3> tempPath = RetracePath(checkedNodes, startingNode, targetNode);
             tempPath = SimplifyPath(tempPath);
             for (int i = 0; i < tempPath.Length; i++)
-            {
                 path.Add(tempPath[i]);
-            }
         }
     }
 
@@ -229,7 +224,7 @@ public struct PathFinderJob : IJob
         simplifiedPath.Add(path[^1]);
         return simplifiedPath;
     }
-    
+
     
     NativeList<float3> RetracePath(NativeList<PathNode> checkedNodes, PathNode startingNode, PathNode targetNode)
     {

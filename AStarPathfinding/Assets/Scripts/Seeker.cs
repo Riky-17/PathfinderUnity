@@ -10,12 +10,22 @@ public class Seeker : MonoBehaviour
     int index = 0;
     float speed = 10f;
     bool pathRequest = false;
+    
+    [SerializeField] float gridSizeX = 50;
+    [SerializeField] float gridSizeZ = 50;
+    float nodeDiameter = 1f;
+    PathNode[] gridNodes;
+
+    void Awake()
+    {
+        gridNodes = PathFinderGrid.CreateGrid(nodeDiameter, gridSizeX, gridSizeZ, obstacleLayer);
+    }
 
     void Update()
     {
         if(!pathRequest)
         {
-            Pathfinder.Instance.FindPath(new(transform.position, hider.position, obstacleLayer,  OnPathFound));
+            Pathfinder.Instance.FindPath(new(transform.position, hider.position, nodeDiameter, gridNodes, OnPathFound));
             pathRequest = true;
         }
 

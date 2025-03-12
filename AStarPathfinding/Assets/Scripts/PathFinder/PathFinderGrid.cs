@@ -1,18 +1,15 @@
-using System.Collections;
-using System.Collections.Generic;
-using Unity.Collections;
 using UnityEngine;
 
 public static class PathFinderGrid
 {
-    public static NativeArray<PathNode> CreateGrid(float gridSizeX, float gridSizeZ, float nodeRadius, LayerMask obstacleLayer)
+    public static PathNode[] CreateGrid(float nodeDiameter, float gridSizeX, float gridSizeZ, LayerMask obstacleLayer)
     {
-        float nodeDiameter = nodeRadius * 2;
+        float nodeRadius = nodeDiameter / 2;
         int NodesAmountX = Mathf.RoundToInt(gridSizeX / nodeDiameter);
         int NodesAmountZ = Mathf.RoundToInt(gridSizeZ / nodeDiameter);
         int TotalNodesAmount = NodesAmountX * NodesAmountZ;
 
-        NativeArray<PathNode> gridNodes = new(TotalNodesAmount, Allocator.Persistent);
+        PathNode[] gridNodes = new PathNode[TotalNodesAmount];
 
         for (int x = 0; x < NodesAmountX; x++)
         {

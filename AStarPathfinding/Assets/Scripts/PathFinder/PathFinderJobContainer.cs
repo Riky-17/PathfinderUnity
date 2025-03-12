@@ -15,21 +15,17 @@ public class PathFinderJobContainer : IDisposable
     NativeList<float3> jobResult;
     public List<Vector3> path;
 
-    float sizeX = 50f;
-    float sizeZ = 50f;
-    float nodeRadius = .5f;
-
     public PathFinderJobContainer(PathfinderRequest request)
     {
         this.request = request;
-        gridNodes = PathFinderGrid.CreateGrid(sizeX, sizeZ, nodeRadius, request.obstacleLayer);
         jobResult = new(Allocator.Persistent);
+        gridNodes = new(request.gridNodes, Allocator.Persistent);
         path = new();
         job = new()
         {
-            gridSizeX = sizeX,
-            gridSizeZ = sizeZ,
-            nodeDiameter = nodeRadius * 2,
+            gridSizeX = 50f,
+            gridSizeZ = 50f,
+            nodeDiameter = request.nodeDiameter,
 
             startingPos = request.startPos,
             targetPos = request.targetPos,
@@ -50,7 +46,6 @@ public class PathFinderJobContainer : IDisposable
         gridNodes.Dispose();
 
         request.callback(path, true);
-        
     }
 
     public bool IsComplete() => jobHandle.IsCompleted;
