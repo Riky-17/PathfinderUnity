@@ -6,7 +6,7 @@ using Unity.Jobs;
 using Unity.Mathematics;
 using UnityEngine;
 
-public class PathFinderJobContainer : IDisposable
+public class PathFinderJobContainer
 {
     PathFinderJob job;
     JobHandle jobHandle;
@@ -15,7 +15,29 @@ public class PathFinderJobContainer : IDisposable
     NativeList<float3> jobResult;
     public List<Vector3> path;
 
+    public PathFinderJobContainer() {}
+
     public PathFinderJobContainer(PathfinderRequest request)
+    {
+        this.request = request;
+        jobResult = new(Allocator.Persistent);
+        gridNodes = new(request.gridNodes, Allocator.Persistent);
+        path = new();
+        job = new()
+        {
+            gridSizeX = 50f,
+            gridSizeZ = 50f,
+            nodeDiameter = request.nodeDiameter,
+
+            startingPos = request.startPos,
+            targetPos = request.targetPos,
+
+            gridNodes = gridNodes,
+            path = jobResult,
+        };
+    }
+
+    public void SetUpRequest(PathfinderRequest request)
     {
         this.request = request;
         jobResult = new(Allocator.Persistent);
@@ -52,7 +74,7 @@ public class PathFinderJobContainer : IDisposable
 
     public void ScheduleJob() => jobHandle = job.Schedule();
 
-    public void Dispose()
+    public void Disable()
     {
         jobHandle.Complete();
         jobResult.Dispose();

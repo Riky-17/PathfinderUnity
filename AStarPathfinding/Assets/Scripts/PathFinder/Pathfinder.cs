@@ -8,6 +8,7 @@ public class Pathfinder : MonoBehaviour
 {
     public static Pathfinder Instance {get; private set;}
 
+    ObjectPool pathfinderJobPool;
     List<PathFinderJobContainer> pathFinderJobs = new();
 
     void Awake()
@@ -19,12 +20,14 @@ public class Pathfinder : MonoBehaviour
         }
         else
             Destroy(gameObject);
+
+        pathfinderJobPool = new();
     }
 
     void OnDisable()
     {
         foreach (PathFinderJobContainer job in pathFinderJobs)
-            job.Dispose();
+            job.Disable();
     }
 
     void Update()
@@ -34,7 +37,7 @@ public class Pathfinder : MonoBehaviour
             PathFinderJobContainer job = pathFinderJobs[i];
             if(job.IsComplete())
             {
-                job.CompleteJob();
+                pathfinderJobPool.ReturnToPool(job);
                 pathFinderJobs.RemoveAt(i);
             }
         }
@@ -42,7 +45,7 @@ public class Pathfinder : MonoBehaviour
 
     public void FindPath(PathfinderRequest request)
     {
-        PathFinderJobContainer jobContainer = new(request);
+        PathFinderJobContainer jobContainer = pathfinderJobPool.RequestJob(request);
         jobContainer.ScheduleJob();
         pathFinderJobs.Add(jobContainer);
     }
@@ -71,6 +74,7 @@ public struct PathFinderJob : IJob
         {
             NativeList<PathNode> nodesToCheck = new(Allocator.Temp) { startingNode };
             NativeList<PathNode> checkedNodes = new(Allocator.Temp);
+            NativeList<PathNode> neighbours;
             PathNode currentNode;
 
             while(nodesToCheck.Length > 0)
@@ -102,7 +106,7 @@ public struct PathFinderJob : IJob
                     break;
                 }
 
-                NativeList<PathNode> neighbours = GetNeighbourNodes(currentNode);
+                neighbours = GetNeighbourNodes(currentNode);
 
                 for (int i = 0; i < neighbours.Length; i++)
                 {
