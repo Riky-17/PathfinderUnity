@@ -1,9 +1,9 @@
 using System;
-using UnityEngine;
+using Unity.Mathematics;
 
 public struct PathNode : IEquatable<PathNode>
 {
-    public Vector3 nodePos;
+    public float3 nodePos;
     public int x;
     public int z;
     public bool IsWalkable;
@@ -12,17 +12,17 @@ public struct PathNode : IEquatable<PathNode>
 
     public int gCost;
     public int hCost;
-    public int FCost => gCost + hCost;
+    public readonly int FCost => gCost + hCost;
 
     public int parentNode;
 
-    public PathNode(Vector3 nodePos, bool IsWalkable, int x, int z, int gridWidth)
+    public PathNode(float3 nodePos, bool IsWalkable, int x, int z, int nodeIndex)
     {
         this.nodePos = nodePos;
         this.IsWalkable = IsWalkable;
         this.x = x;
         this.z = z;
-        index = x + z * gridWidth;
+        index = nodeIndex;
         gCost = 0;
         hCost = 0;
         parentNode = -1;
@@ -35,9 +35,9 @@ public struct PathNode : IEquatable<PathNode>
         return false;
     }
 
-    public override readonly int GetHashCode() => HashCode.Combine(index);
+    public override readonly int GetHashCode() => HashCode.Combine(x + z);
     public readonly bool Equals(PathNode other) => this == other;
 
-    public static bool operator ==(PathNode left, PathNode right) => left.index == right.index; 
+    public static bool operator ==(PathNode left, PathNode right) => left.x == right.x && left.z == right.z; 
     public static bool operator !=(PathNode left, PathNode right) => !(left == right); 
 }

@@ -53,18 +53,16 @@ public class Pathfinder : MonoBehaviour
 
 public struct PathFinderJob : IJob
 {
-    public float gridSizeX;
-    public float gridSizeZ;
+    public int nodesDiameterAmount; // the amount of nodes across the diameter
 
-    public float nodeDiameter;
-    
-    readonly int NodesAmountX => (int)math.round(gridSizeX / nodeDiameter);
-    readonly int NodesAmountZ => (int)math.round(gridSizeZ / nodeDiameter);
+    public float gridRadius;
+    public float3 centerPos;
 
     public float3 startingPos;
     public float3 targetPos;
 
-    public NativeArray<PathNode> gridNodes;
+    public NativeList<PathNode> gridNodes;
+    public NativeHashMap<(int, int), int> nodesIndexes;
 
     public NativeList<float3> path;
 
@@ -139,26 +137,33 @@ public struct PathFinderJob : IJob
             for (int i = 0; i < tempPath.Length; i++)
                 path.Add(tempPath[i]);
         }
+        
     }
 
-    bool CheckWorldPosInGrid(Vector3 worldPos, out PathNode node)
+    bool CheckWorldPosInGrid(float3 worldPos, out PathNode node)
     {
-        float halfGridSizeX = gridSizeX / 2;
-        float halfGridSizeZ = gridSizeZ / 2;
-        if (worldPos.x < -halfGridSizeX || worldPos.x > halfGridSizeX || worldPos.z < -halfGridSizeZ || worldPos.z > halfGridSizeZ )
+        float3 relV = worldPos - centerPos;
+        float dist = relV.x * relV.x + relV.y * relV.y;;
+
+        if(dist > gridRadius * gridRadius)
         {
-            // world position is outside of the grid
             node = default;
             return false;
         }
 
-        float tValueX = InverseLerp(-halfGridSizeX, halfGridSizeX, worldPos.x);
-        float tValueZ = InverseLerp(-halfGridSizeZ, halfGridSizeZ, worldPos.z);
+        float tValueX = InverseLerp(-gridRadius, gridRadius, relV.x);
+        float tValueZ = InverseLerp(-gridRadius, gridRadius, relV.z);
 
-        int x = (int)math.round(tValueX * (NodesAmountX - 1)); 
-        int z = (int)math.round(tValueZ * (NodesAmountZ - 1));
+        int x = (int)math.round(tValueX * (nodesDiameterAmount - 1)); 
+        int z = (int)math.round(tValueZ * (nodesDiameterAmount - 1));
 
-        node = gridNodes[x + z * NodesAmountX];
+        if(!nodesIndexes.ContainsKey((x, z)))
+        {
+            node = default;
+            return false;
+        }
+
+        node = gridNodes[nodesIndexes[(x, z)]];
         return true; 
     }
     
@@ -167,14 +172,16 @@ public struct PathFinderJob : IJob
         NativeList<PathNode> neighbours = new(Allocator.Temp);
         for (int x = -1; x < 2; x++)
         {
+            int neighbourX = node.x + x;
+
             for (int z = -1; z < 2; z++)
             {
-                int neighbourX = math.clamp(node.x + x, 0, NodesAmountX - 1);                
-                int neighbourZ = math.clamp(node.z + z, 0, NodesAmountZ - 1);
-                int neighbourIndex = neighbourX + neighbourZ * NodesAmountX;
+                if(x == 0 && z == 0)
+                    continue;
                 
-                if(gridNodes[neighbourIndex] != node)
-                    neighbours.Add(gridNodes[neighbourIndex]);
+                int neighbourZ = node.z + z;
+                if(nodesIndexes.ContainsKey((neighbourX, neighbourZ)))
+                    neighbours.Add(gridNodes[nodesIndexes[(neighbourX, neighbourZ)]]);
             }
         }
         return neighbours;

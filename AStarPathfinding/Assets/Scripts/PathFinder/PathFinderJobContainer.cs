@@ -1,5 +1,3 @@
-using System;
-using System.Collections;
 using System.Collections.Generic;
 using Unity.Collections;
 using Unity.Jobs;
@@ -11,48 +9,41 @@ public class PathFinderJobContainer
     PathFinderJob job;
     JobHandle jobHandle;
     PathfinderRequest request;
-    NativeArray<PathNode> gridNodes;
+    NativeList<PathNode> gridNodes;
     NativeList<float3> jobResult;
+    NativeHashMap<(int, int), int> nodesIndexes;
     public List<Vector3> path;
 
     public PathFinderJobContainer() {}
 
     public PathFinderJobContainer(PathfinderRequest request)
     {
-        this.request = request;
-        jobResult = new(Allocator.Persistent);
-        gridNodes = new(request.gridNodes, Allocator.Persistent);
-        path = new();
-        job = new()
-        {
-            gridSizeX = 50f,
-            gridSizeZ = 50f,
-            nodeDiameter = request.nodeDiameter,
-
-            startingPos = request.startPos,
-            targetPos = request.targetPos,
-
-            gridNodes = gridNodes,
-            path = jobResult,
-        };
+        SetUpRequest(request);
     }
 
     public void SetUpRequest(PathfinderRequest request)
     {
         this.request = request;
         jobResult = new(Allocator.Persistent);
-        gridNodes = new(request.gridNodes, Allocator.Persistent);
-        path = new();
+        gridNodes = new(Allocator.Persistent);
+        nodesIndexes = new(request.gridNodes.Count, Allocator.Persistent);
+        foreach (PathNode node in request.gridNodes)
+        {
+            gridNodes.Add(node);
+            nodesIndexes.Add((node.x, node.z), node.index);
+        }
+
         job = new()
         {
-            gridSizeX = 50f,
-            gridSizeZ = 50f,
-            nodeDiameter = request.nodeDiameter,
+            nodesDiameterAmount = Mathf.RoundToInt(request.gridRadius * 2 / (request.nodeRadius * 2)),
+            gridRadius = request.gridRadius,
+            centerPos = request.gridCenter,
 
             startingPos = request.startPos,
             targetPos = request.targetPos,
 
             gridNodes = gridNodes,
+            nodesIndexes = nodesIndexes,
             path = jobResult,
         };
     }
@@ -60,12 +51,14 @@ public class PathFinderJobContainer
     public void CompleteJob()
     {
         jobHandle.Complete();
+        path = new();
 
         foreach (float3 pos in jobResult)
             path.Add(pos);
             
         jobResult.Dispose();
         gridNodes.Dispose();
+        nodesIndexes.Dispose();
 
         request.callback(path, true);
     }
@@ -79,5 +72,6 @@ public class PathFinderJobContainer
         jobHandle.Complete();
         jobResult.Dispose();
         gridNodes.Dispose();
+        nodesIndexes.Dispose();
     }
 }
