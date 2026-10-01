@@ -13,27 +13,45 @@ public class Seeker : MonoBehaviour
     
     float gridRadius = 25;
     float nodeRadius = .5f;
-    List<PathNode> gridNodes;
+    List<PathNode> grid;
     Vector3 gridCenter;
+
+    [SerializeField] bool localGrid;
 
     void Awake()
     {
         gridCenter = transform.position;
-        gridNodes = PathFinderGrid.CreateGrid(gridCenter, nodeRadius, gridRadius, obstacleLayer);
+        if(localGrid)
+            grid = PathFinderGrid.CreateCircularGrid(gridCenter, nodeRadius, gridRadius, obstacleLayer);
+        else
+            grid = PathFinderGrid.CreateWorldGrid(nodeRadius, obstacleLayer);
     }
 
     void Update()
     {
-        if((hider.transform.position - transform.position).magnitude > gridRadius)
+        if(localGrid)
         {
-            pathRequest = false;
-            path = null;
-            index = 0;
+            if((hider.transform.position - transform.position).magnitude > gridRadius)
+            {
+                pathRequest = false;
+                path = null;
+                index = 0;
+                return;
+            }
+            
+            if(!pathRequest)
+            {
+                Pathfinder.Instance.FindPathLocalGrid(transform.position, hider.transform.position, gridCenter, gridRadius, nodeRadius, grid, OnPathFound);
+                pathRequest = true;
+            }
         }
-        else if(!pathRequest)
+        else
         {
-            Pathfinder.Instance.FindPath(new(transform.position, hider.transform.position, gridRadius, nodeRadius, gridNodes, gridCenter, OnPathFound));
-            pathRequest = true;
+            if(!pathRequest)
+            {
+                Pathfinder.Instance.FindPathWorldGrid(transform.position, hider.transform.position, nodeRadius, grid, OnPathFound);
+                pathRequest = true;
+            }
         }
 
         if (Input.GetKeyDown(KeyCode.Space) && path != null)
@@ -64,30 +82,22 @@ public class Seeker : MonoBehaviour
         transform.position += Time.deltaTime * speed * dir;
     }
 
-    void OnPathFound(List<Vector3> path, bool isPathComplete)
+    void OnPathFound(List<Vector3> path)
     {
         pathRequest = false;
+        index = 0;
         
-        if (path.Count > 0)
-        {
-            this.path = path;
-            index = 0;
-        }
-        else
-        {
-            this.path = null;
-            index = 0;
-        }
+        this.path = path.Count > 0 ? path : null;
     }
 
     void OnDrawGizmos()
     {
-        if(gridNodes == null)
+        if(grid == null)
             return;
 
-        Gizmos.color = Color.blue;
-        Gizmos.DrawWireSphere(gridCenter, gridRadius);
-        Gizmos.color = Color.white;
+        // Gizmos.color = Color.blue;
+        // Gizmos.DrawWireSphere(gridCenter, gridRadius);
+        // Gizmos.color = Color.white;
         // foreach(PathNode node in gridNodes)
         // {
         //     Gizmos.color = node.IsWalkable ? Color.green : Color.red;

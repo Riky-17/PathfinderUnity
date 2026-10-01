@@ -4,31 +4,20 @@ using UnityEngine;
 
 public class ObjectPool
 {
-    int initialSize;
-    Stack<PathFinderJobContainer> pool;
-    
-    public ObjectPool(int initialSize)
-    {
-        this.initialSize = initialSize;
-        PopulatePool();
-    }
+    Stack<PathFinderJobInfo> pool;
 
-    public ObjectPool()
-    {
-        initialSize = 5;
-        PopulatePool();
-    }
+    public ObjectPool() => PopulatePool();
 
     void PopulatePool()
     {
         pool = new();
-        for (int i = 0; i < initialSize; i++)
+        for (int i = 0; i < 10; i++)
             pool.Push(new());
     }
 
-    public PathFinderJobContainer RequestJob(PathfinderRequest request)
+    public PathFinderJobInfo RequestJob(PathfinderRequest request)
     {
-        PathFinderJobContainer job;
+        PathFinderJobInfo job;
         if(pool.Count > 0)
         {
             job = pool.Pop();
@@ -40,7 +29,7 @@ public class ObjectPool
         return job;
     }
 
-    public void ReturnToPool(PathFinderJobContainer job)
+    public void ReturnToPool(PathFinderJobInfo job)
     {
         job.CompleteJob();
         pool.Push(job);

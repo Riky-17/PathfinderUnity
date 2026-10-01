@@ -4,7 +4,7 @@ using Unity.Jobs;
 using Unity.Mathematics;
 using UnityEngine;
 
-public class PathFinderJobContainer
+public class PathFinderJobInfo
 {
     PathFinderJob job;
     JobHandle jobHandle;
@@ -14,20 +14,19 @@ public class PathFinderJobContainer
     NativeHashMap<(int, int), int> nodesIndexes;
     public List<Vector3> path;
 
-    public PathFinderJobContainer() {}
+    public PathFinderJobInfo() {}
 
-    public PathFinderJobContainer(PathfinderRequest request)
-    {
-        SetUpRequest(request);
-    }
+    public PathFinderJobInfo(PathfinderRequest request) => SetUpRequest(request);
 
     public void SetUpRequest(PathfinderRequest request)
     {
         this.request = request;
+
         jobResult = new(Allocator.Persistent);
         gridNodes = new(Allocator.Persistent);
-        nodesIndexes = new(request.gridNodes.Count, Allocator.Persistent);
-        foreach (PathNode node in request.gridNodes)
+        nodesIndexes = new(request.grid.Count, Allocator.Persistent);
+
+        foreach (PathNode node in request.grid)
         {
             gridNodes.Add(node);
             nodesIndexes.Add((node.x, node.z), node.index);
@@ -35,15 +34,16 @@ public class PathFinderJobContainer
 
         job = new()
         {
-            nodesDiameterAmount = Mathf.RoundToInt(request.gridRadius * 2 / (request.nodeRadius * 2)),
-            gridRadius = request.gridRadius,
+            nodesAmountX = Mathf.RoundToInt(request.gridHalfSize.x * 2 / (request.nodeRadius * 2)),
+            nodesAmountZ = Mathf.RoundToInt(request.gridHalfSize.y * 2 / (request.nodeRadius * 2)),
+            gridHalfSize = request.gridHalfSize,
             centerPos = request.gridCenter,
 
             startingPos = request.startPos,
             targetPos = request.targetPos,
 
             gridNodes = gridNodes,
-            nodesIndexes = nodesIndexes,
+            nodesIndices = nodesIndexes,
             path = jobResult,
         };
     }
@@ -60,7 +60,7 @@ public class PathFinderJobContainer
         gridNodes.Dispose();
         nodesIndexes.Dispose();
 
-        request.callback(path, true);
+        request.callback(path);
     }
 
     public bool IsComplete() => jobHandle.IsCompleted;

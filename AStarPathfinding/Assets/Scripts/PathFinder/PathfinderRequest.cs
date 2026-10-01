@@ -6,19 +6,19 @@ public struct PathfinderRequest
 {
     public Vector3 startPos;
     public Vector3 targetPos;
-    public float gridRadius;
+    public Vector2 gridHalfSize;
     public float nodeRadius;
-    public List<PathNode> gridNodes;
+    public List<PathNode> grid;
     public Vector3 gridCenter;
-    public Action<List<Vector3>, bool> callback;
+    public Action<List<Vector3>> callback;
 
-    public PathfinderRequest(Vector3 startPos, Vector3 targetPos, float gridRadius, float nodeRadius, List<PathNode> gridNodes, Vector3 gridCenter, Action<List<Vector3>, bool> callback)
+    public PathfinderRequest(Vector3 startPos, Vector3 targetPos, Vector3 gridCenter, Vector2 gridHalfSize, float nodeRadius, List<PathNode> grid, Action<List<Vector3>> callback)
     {
         this.startPos = startPos;
         this.targetPos = targetPos;
-        this.gridRadius = gridRadius;
+        this.gridHalfSize = gridHalfSize;
         this.nodeRadius = nodeRadius;
-        this.gridNodes = gridNodes;
+        this.grid = grid;
         this.gridCenter = gridCenter;
         this.callback = callback;
     }

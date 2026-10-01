@@ -3,13 +3,16 @@ using UnityEngine;
 using Unity.Jobs;
 using Unity.Mathematics;
 using Unity.Collections;
+using System;
 
 public class Pathfinder : MonoBehaviour
 {
     public static Pathfinder Instance {get; private set;}
 
     ObjectPool pathfinderJobPool;
-    List<PathFinderJobContainer> pathFinderJobs = new();
+    List<PathFinderJobInfo> pathFinderJobs = new();
+
+    readonly Vector2 worldGridHalfSize = new(50, 50);
 
     void Awake()
     {
@@ -26,7 +29,7 @@ public class Pathfinder : MonoBehaviour
 
     void OnDisable()
     {
-        foreach (PathFinderJobContainer job in pathFinderJobs)
+        foreach (PathFinderJobInfo job in pathFinderJobs)
             job.Disable();
     }
 
@@ -34,7 +37,7 @@ public class Pathfinder : MonoBehaviour
     {
         for (int i = pathFinderJobs.Count - 1; i >= 0 ; i--)
         {
-            PathFinderJobContainer job = pathFinderJobs[i];
+            PathFinderJobInfo job = pathFinderJobs[i];
             if(job.IsComplete())
             {
                 pathfinderJobPool.ReturnToPool(job);
@@ -43,9 +46,19 @@ public class Pathfinder : MonoBehaviour
         }
     }
 
-    public void FindPath(PathfinderRequest request)
+    public void FindPathLocalGrid(Vector3 startPos, Vector3 targetPos, Vector3 gridCenter, 
+                                  float gridRadius, float nodeRadius, List<PathNode> grid, 
+                                  Action<List<Vector3>> OnPathFound)
     {
-        PathFinderJobContainer jobContainer = pathfinderJobPool.RequestJob(request);
+        PathFinderJobInfo jobContainer = pathfinderJobPool.RequestJob(new(startPos, targetPos, gridCenter, new(gridRadius, gridRadius), nodeRadius, grid, OnPathFound));
+        jobContainer.ScheduleJob();
+        pathFinderJobs.Add(jobContainer);
+    }
+
+    public void FindPathWorldGrid(Vector3 startPos, Vector3 targetPos, float nodeRadius, 
+                                  List<PathNode> grid, Action<List<Vector3>> OnPathFound)
+    {
+        PathFinderJobInfo jobContainer = pathfinderJobPool.RequestJob(new(startPos, targetPos, Vector3.zero, worldGridHalfSize, nodeRadius, grid, OnPathFound));
         jobContainer.ScheduleJob();
         pathFinderJobs.Add(jobContainer);
     }
@@ -53,91 +66,93 @@ public class Pathfinder : MonoBehaviour
 
 public struct PathFinderJob : IJob
 {
-    public int nodesDiameterAmount; // the amount of nodes across the diameter
+    public int nodesAmountX; // the amount of nodes across the diameter
+    public int nodesAmountZ; // the amount of nodes across the diameter
 
-    public float gridRadius;
+    public float2 gridHalfSize;
     public float3 centerPos;
 
     public float3 startingPos;
     public float3 targetPos;
 
     public NativeList<PathNode> gridNodes;
-    public NativeHashMap<(int, int), int> nodesIndexes;
+    public NativeHashMap<(int, int), int> nodesIndices;
 
     public NativeList<float3> path;
 
     public void Execute()
     {
-        if(CheckWorldPosInGrid(startingPos, out PathNode startingNode) && startingNode.IsWalkable && CheckWorldPosInGrid(targetPos, out PathNode targetNode) && targetNode.IsWalkable)
+        if (!CheckWorldPosInGrid(startingPos, out PathNode startingNode) || !startingNode.IsWalkable || !CheckWorldPosInGrid(targetPos, out PathNode targetNode) || !targetNode.IsWalkable)
+            return;
+
+        NativeList<PathNode> nodesToCheck = new(Allocator.Temp) { startingNode };
+        NativeList<PathNode> checkedNodes = new(Allocator.Temp);
+        NativeList<PathNode> neighbours;
+        PathNode currentNode;
+
+        while (nodesToCheck.Length > 0)
         {
-            NativeList<PathNode> nodesToCheck = new(Allocator.Temp) { startingNode };
-            NativeList<PathNode> checkedNodes = new(Allocator.Temp);
-            NativeList<PathNode> neighbours;
-            PathNode currentNode;
+            currentNode = nodesToCheck[0];
+            int currentNodeIndex = 0;
 
-            while(nodesToCheck.Length > 0)
+            for (int i = 0; i < nodesToCheck.Length; i++)
             {
-                currentNode = nodesToCheck[0];
-                int currentNodeIndex = 0;
-
-                for (int i = 0; i < nodesToCheck.Length; i++)
+                PathNode node = nodesToCheck[i];
+                if (node.FCost < currentNode.FCost)
                 {
-                    PathNode node = nodesToCheck[i];
-                    if(node.FCost < currentNode.FCost)
-                    {
-                        currentNode = node;
-                        currentNodeIndex = i;
-                    }
-                    else if (node.FCost == currentNode.FCost && node.hCost < currentNode.hCost)
-                    {
-                        currentNode = node;
-                        currentNodeIndex = i;
-                    }
+                    currentNode = node;
+                    currentNodeIndex = i;
                 }
-
-                nodesToCheck.RemoveAt(currentNodeIndex);
-                checkedNodes.Add(currentNode);
-
-                if(currentNode == targetNode)
+                else if (node.FCost == currentNode.FCost && node.hCost < currentNode.hCost)
                 {
-                    targetNode = currentNode;
-                    break;
-                }
-
-                neighbours = GetNeighbourNodes(currentNode);
-
-                for (int i = 0; i < neighbours.Length; i++)
-                {
-                    PathNode neighbour = neighbours[i];
-                    if (!neighbour.IsWalkable || checkedNodes.Contains(neighbour))
-                        continue;
-
-                    int dist = CalculateDistance(currentNode, neighbour);
-
-                    //this is to avoid the seeker cutting corner when next to a wall causing the seeker to momentarily going inside a wall
-                    if (dist == 14 && IsNodePastCorner(neighbours, currentNode, neighbour))
-                        continue;
-
-                    int distanceStartToNeighbour = currentNode.gCost + dist;
-
-                    if (neighbour.gCost > distanceStartToNeighbour || !nodesToCheck.Contains(neighbour))
-                    {
-                        neighbour.gCost = distanceStartToNeighbour;
-                        neighbour.hCost = CalculateDistance(neighbour, targetNode);
-                        neighbour.parentNode = currentNode.index;
-                        gridNodes[neighbour.index] = neighbour;
-
-                        if (!nodesToCheck.Contains(neighbour))
-                            nodesToCheck.Add(neighbour);
-                    }
+                    currentNode = node;
+                    currentNodeIndex = i;
                 }
             }
-            NativeList<float3> tempPath = RetracePath(checkedNodes, startingNode, targetNode);
-            tempPath = SimplifyPath(tempPath);
-            for (int i = 0; i < tempPath.Length; i++)
-                path.Add(tempPath[i]);
+
+            nodesToCheck.RemoveAt(currentNodeIndex);
+            checkedNodes.Add(currentNode);
+
+            if (currentNode == targetNode)
+            {
+                targetNode = currentNode; // ?
+                break;
+            }
+
+            neighbours = GetNeighbourNodes(currentNode);
+
+            for (int i = 0; i < neighbours.Length; i++)
+            {
+                PathNode neighbour = neighbours[i];
+                if (!neighbour.IsWalkable || checkedNodes.Contains(neighbour))
+                    continue;
+
+                int dist = CalculateDistance(currentNode, neighbour);
+
+                //this is to avoid the seeker cutting corner when next to a wall causing the seeker to momentarily going inside a wall
+                if (dist == 14 && IsNodePastCorner(neighbours, currentNode, neighbour))
+                    continue;
+
+                int distanceStartToNeighbour = currentNode.gCost + dist;
+
+                if (neighbour.gCost > distanceStartToNeighbour || !nodesToCheck.Contains(neighbour))
+                {
+                    neighbour.gCost = distanceStartToNeighbour;
+                    neighbour.hCost = CalculateDistance(neighbour, targetNode);
+                    neighbour.parentNode = currentNode.index;
+                    gridNodes[neighbour.index] = neighbour;
+
+                    if (!nodesToCheck.Contains(neighbour))
+                        nodesToCheck.Add(neighbour);
+                }
+            }
         }
         
+        NativeList<float3> tempPath = RetracePath(checkedNodes, startingNode, targetNode);
+        tempPath = SimplifyPath(tempPath);
+        for (int i = 0; i < tempPath.Length; i++)
+            path.Add(tempPath[i]);
+
     }
 
     bool CheckWorldPosInGrid(float3 worldPos, out PathNode node)
@@ -145,25 +160,25 @@ public struct PathFinderJob : IJob
         float3 relV = worldPos - centerPos;
         float dist = relV.x * relV.x + relV.y * relV.y;;
 
-        if(dist > gridRadius * gridRadius)
+        if(dist > gridHalfSize.x * gridHalfSize.x || dist > gridHalfSize.y * gridHalfSize.y)
         {
             node = default;
             return false;
         }
 
-        float tValueX = InverseLerp(-gridRadius, gridRadius, relV.x);
-        float tValueZ = InverseLerp(-gridRadius, gridRadius, relV.z);
+        float tValueX = InverseLerp(-gridHalfSize.x, gridHalfSize.x, relV.x);
+        float tValueZ = InverseLerp(-gridHalfSize.y, gridHalfSize.y, relV.z);
 
-        int x = (int)math.round(tValueX * (nodesDiameterAmount - 1)); 
-        int z = (int)math.round(tValueZ * (nodesDiameterAmount - 1));
+        int x = (int)math.round(tValueX * (nodesAmountX - 1)); 
+        int z = (int)math.round(tValueZ * (nodesAmountZ - 1));
 
-        if(!nodesIndexes.ContainsKey((x, z)))
+        if(!nodesIndices.ContainsKey((x, z)))
         {
             node = default;
             return false;
         }
 
-        node = gridNodes[nodesIndexes[(x, z)]];
+        node = gridNodes[nodesIndices[(x, z)]];
         return true; 
     }
     
@@ -180,8 +195,8 @@ public struct PathFinderJob : IJob
                     continue;
                 
                 int neighbourZ = node.z + z;
-                if(nodesIndexes.ContainsKey((neighbourX, neighbourZ)))
-                    neighbours.Add(gridNodes[nodesIndexes[(neighbourX, neighbourZ)]]);
+                if(nodesIndices.ContainsKey((neighbourX, neighbourZ)))
+                    neighbours.Add(gridNodes[nodesIndices[(neighbourX, neighbourZ)]]);
             }
         }
         return neighbours;
@@ -202,13 +217,13 @@ public struct PathFinderJob : IJob
     {
         foreach (PathNode neighbour in neighbours)
         {
-            if(!neighbour.IsWalkable && CalculateDistance(currentNode, neighbour) == 10)
-            {
-                Vector2 currentToWall = new(neighbour.nodePos.x - currentNode.nodePos.x, neighbour.nodePos.z - currentNode.nodePos.z);
-                Vector2 currentToNeighbour = new(currentNeighbour.nodePos.x - currentNode.nodePos.x, currentNeighbour.nodePos.z - currentNode.nodePos.z);
-                if(Vector2.Dot(currentToWall, currentToNeighbour) > 0)
-                    return true;
-            }
+            if (neighbour.IsWalkable || CalculateDistance(currentNode, neighbour) != 10)
+                continue;
+                
+            float2 currentToWall = new(neighbour.nodePos.x - currentNode.nodePos.x, neighbour.nodePos.z - currentNode.nodePos.z);
+            float2 currentToNeighbour = new(currentNeighbour.nodePos.x - currentNode.nodePos.x, currentNeighbour.nodePos.z - currentNode.nodePos.z);
+            if (math.dot(currentToNeighbour, currentToWall) > 0)
+                return true;
         }
         return false;
     }
@@ -217,18 +232,18 @@ public struct PathFinderJob : IJob
     {
         if (path.Length < 2)
             return path;
+
         NativeList<float3> simplifiedPath = new(Allocator.Temp);
         float3 prevRelVector = path[1] - path[0];
 
         for (int i = 1; i < path.Length - 1; i++)
         {
             float3 relVector = path[i + 1] - path[i];
-            bool3 isSameDir = math.normalize(relVector) == math.normalize(prevRelVector);
+            // bool3 isSameDir = 
+            bool3 isSameDir = math.dot(math.normalize(prevRelVector), math.normalize(relVector)) > 0.9f;
                 
-            if (!isSameDir.x || !isSameDir.y || !isSameDir.z)
-            {
+            if (!math.all(isSameDir))
                 simplifiedPath.Add(path[i]);
-            }
 
             prevRelVector = relVector;
         }
