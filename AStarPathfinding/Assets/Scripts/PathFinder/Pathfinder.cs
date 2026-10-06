@@ -115,7 +115,7 @@ public struct PathFinderJob : IJob
 
             if (currentNode == targetNode)
             {
-                targetNode = currentNode; // ?
+                targetNode = currentNode;
                 break;
             }
 
@@ -239,7 +239,7 @@ public struct PathFinderJob : IJob
         for (int i = 1; i < path.Length - 1; i++)
         {
             float3 relVector = path[i + 1] - path[i];
-            // bool3 isSameDir = 
+            
             bool3 isSameDir = math.dot(math.normalize(prevRelVector), math.normalize(relVector)) > 0.9f;
                 
             if (!math.all(isSameDir))
