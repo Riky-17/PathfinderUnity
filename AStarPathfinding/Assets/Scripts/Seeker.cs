@@ -27,6 +27,10 @@ public class Seeker : MonoBehaviour
             grid = PathFinderGrid.CreateWorldGrid(nodeRadius, obstacleLayer);
     }
 
+    void OnEnable() => ResetPositionsButton.OnResetPositions += ResetPosition;
+
+    void OnDisable() => ResetPositionsButton.OnResetPositions -= ResetPosition;
+
     void Update()
     {
         if(localGrid)
@@ -60,6 +64,12 @@ public class Seeker : MonoBehaviour
         if (canFollowPath && path != null)
             FollowPath();
 
+    }
+
+    void ResetPosition()
+    {
+        canFollowPath = false;
+        transform.position = gridCenter;
     }
 
     private void FollowPath()
