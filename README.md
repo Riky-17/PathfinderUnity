@@ -1,5 +1,7 @@
 # A* Pathfinding Algorithm in Unity
 
+![Pathfinder Demonstration](./Images/PathfinderDemonstration.gif)
+
 ## What is A*?
 
 The A* is a maze-solving or pathfinding algorithm. By giving it a grid with obstacles, it is able to find the shortest path between a start node and a target node.
@@ -9,7 +11,7 @@ The way it works is that each node of the grid has 3 values:
 * The H value, this one represents the distance between the current node and the target node, this is not a precise value as it does not keep track of the obstacles.
 * The F value, this is the sum between the G and the H values.
 
-The algorithm revolves around a single loop that iterates through a list of Nodes, this list starts with only one element, the starting node, inside the loop the algorithm will pick the node with the lowest F value, or if they are tied it will pick the one with the lowest H value.\
+The [algorithm](https://github.com/Riky-17/PathfinderUnity/blob/b430c30d80338336efcd993964888c6fda98067f/AStarPathfinding/Assets/Scripts/PathFinder/Pathfinder.cs#L83-L156) revolves around a single loop that iterates through a list of Nodes, this list starts with only one element, the starting node, inside the loop the algorithm will pick the node with the lowest F value, or if they are tied it will pick the one with the lowest H value.\
 This node is then removed from the list and added to another list containing the checked nodes. Then it will get the neighbors of the selected node, discarding any node that is considered an obstacle node, the algorithm will iterate through each neighbor and calculate the distance between it and the selected node.\
 The distance value is either 10, if the neighbor is located horizontally or vertically next to the selected node, or 14 if it is located diagonally next to it.\
 Given this rule, the method to calculate the distance is:
@@ -32,6 +34,8 @@ readonly int CalculateDistance(PathNode nodeA, PathNode nodeB)
 After the distance is calculate the result will be summed with the G value of the selected node, if the new value is lower than the G value of the neighbor, or if the neighbor is not in the list of nodes to be checked, the new will be the G value of the neighbor node. After, the algorithm will use the same method to calculate the distance between the neighbor and the target node, this will be the H value of the neighbor, Lastly it will add the neighbor node in the list of nodes to be checked.
 
 This is what happens at every iteration and it will continue until either the list of nodes to check is emptied, at which point the algorithm will end with the target node being unreachable, or it will end when one of the selected node is the target node, if this is the case the algorithm will retrace the path it took until reaching again the starting node. The result will be the shortest path possible between the starting point and the target point. 
+
+![Pathfinder Example](./Images/PathfinderExample.gif)
 
 ## Code Explanation
 
