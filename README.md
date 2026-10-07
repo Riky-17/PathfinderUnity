@@ -35,7 +35,7 @@ readonly int CalculateDistance(PathNode nodeA, PathNode nodeB)
 
 ```
 
-After the distance is calculate the result will be summed with the G value of the selected node, if the new value is lower than the G value of the neighbor, or if the neighbor is not in the list of nodes to be checked, the new will be the G value of the neighbor node. After, the algorithm will use the same method to calculate the distance between the neighbor and the target node, this will be the H value of the neighbor, Lastly it will add the neighbor node in the list of nodes to be checked.
+After the distance is calculated the result will be summed with the G value of the selected node, if the new value is lower than the G value of the neighbor, or if the neighbor is not in the list of nodes to be checked, the new value will become neighbor's G value. After, the algorithm will use the same method to calculate the distance between the neighbor and the target node, this will be the H value of the neighbor, Lastly it will add the neighbor node in the list of nodes to be checked.
 
 This is what happens at every iteration and it will continue until either the list of nodes to check is emptied, at which point the algorithm will end with the target node being unreachable, or it will end when one of the selected node is the target node, if this is the case the algorithm will retrace the path it took until reaching again the starting node. The result will be the shortest path possible between the starting point and the target point.
 
